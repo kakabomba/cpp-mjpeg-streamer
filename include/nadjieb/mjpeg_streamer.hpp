@@ -37,6 +37,7 @@ SOFTWARE.
 #include <nadjieb/utils/non_copyable.hpp>
 
 #include <string>
+#include <unordered_map>
 
 namespace nadjieb {
 class MJPEGStreamer : public nadjieb::utils::NonCopyable {
@@ -63,9 +64,13 @@ class MJPEGStreamer : public nadjieb::utils::NonCopyable {
 
     bool isRunning() { return (publisher_.isRunning() && listener_.isRunning()); }
 
-    int getQuality() { return requested_quality_; }
+    int getRequestedParameter(const std::string& key) {
+        return requested_parameters_[key];
+        }
 
-    int getExposition() { return requested_exposition_; }
+    void getRequestedRoi(int& l, int& t, int& r, int& b) {
+
+    }
 
     bool hasClient(const std::string& path) { return publisher_.hasClient(path); }
 
@@ -73,82 +78,57 @@ class MJPEGStreamer : public nadjieb::utils::NonCopyable {
     nadjieb::net::Listener listener_;
     nadjieb::net::Publisher publisher_;
     std::string shutdown_target_ = "/shutdown";
-    std::string quality_ = "/quality";
-    std::string exposition_ = "/exposition";
-    int requested_quality_ = 90;
-    int requested_exposition_ = 100;
+    std::string parameter_ = "/parameter";
+    std::string roi_ = "/roi";
+    std::unordered_map<std::string, int> requested_parameters_;
+
 
     nadjieb::net::OnMessageCallback on_message_cb_ = [&](const nadjieb::net::SocketFD& sockfd,
                                                          const std::string& message) {
         nadjieb::net::HTTPRequest req(message);
         nadjieb::net::OnMessageCallbackResponse cb_res;
 
+        nadjieb::net::HTTPResponse ok_res;
+        ok_res.setVersion(req.getVersion());
+        ok_res.setStatusCode(200);
+        ok_res.setStatusText("OK");
+        auto ok_res_str = ok_res.serialize();
+
         if (req.getTarget() == shutdown_target_) {
-            nadjieb::net::HTTPResponse shutdown_res;
-            shutdown_res.setVersion(req.getVersion());
-            shutdown_res.setStatusCode(200);
-            shutdown_res.setStatusText("OK");
-            auto shutdown_res_str = shutdown_res.serialize();
-
-            nadjieb::net::sendViaSocket(sockfd, shutdown_res_str.c_str(), shutdown_res_str.size(), 0);
-
+            nadjieb::net::sendViaSocket(sockfd, ok_res_str.c_str(), ok_res_str.size(), 0);
             publisher_.stop();
-
             cb_res.end_listener = true;
             return cb_res;
         }
 
-        if (req.getTarget() == quality_) {
-            nadjieb::net::HTTPResponse quality_res;
-            quality_res.setVersion(req.getVersion());
+        if (req.getTarget() == roi_) {
+            nadjieb::net::sendViaSocket(sockfd, ok_res_str.c_str(), ok_res_str.size(), 0);
+            cb_res.close_conn = true;
+            return cb_res;
+        }
+
+        if (req.getTarget() == parameter_) {
+            std::string parameter_name;
+            int parameter_value;
 
             try
             {
-                requested_quality_ = std::max(1, std::min(100, std::stoi(req.getRequestValue())));
+                req.getRequestParameter(parameter_name, parameter_value);
             }
             catch (...)
             {
 
             }
 
-            quality_res.setStatusCode(200);
-            quality_res.setStatusText("OK");
-            char buff[100];
-            snprintf(buff, sizeof(buff), "%d", requested_quality_);
-            std::string buffAsStdStr = buff;
-            quality_res.setBody(buffAsStdStr);
+            if (parameter_name == "quality" or parameter_name == "exposition" or parameter_name == "brightness" or parameter_name == "contrast" or parameter_name == "enhance") {
+                requested_parameters_[parameter_name] = parameter_value;
+                }
 
-            auto quality_res_str = quality_res.serialize();
-            nadjieb::net::sendViaSocket(sockfd, quality_res_str.c_str(), quality_res_str.size(), 0);
+            nadjieb::net::sendViaSocket(sockfd, ok_res_str.c_str(), ok_res_str.size(), 0);
             cb_res.close_conn = true;
             return cb_res;
         }
 
-        if (req.getTarget() == exposition_) {
-            nadjieb::net::HTTPResponse exposition_res;
-            exposition_res.setVersion(req.getVersion());
-
-            try
-            {
-                requested_exposition_ = std::max(1, std::min(1000*3600, std::stoi(req.getRequestValue())));
-            }
-            catch (...)
-            {
-
-            }
-
-            exposition_res.setStatusCode(200);
-            exposition_res.setStatusText("OK");
-            char buff[100];
-            snprintf(buff, sizeof(buff), "%d", requested_exposition_);
-            std::string buffAsStdStr = buff;
-            exposition_res.setBody(buffAsStdStr);
-
-            auto exposition_res_str = exposition_res.serialize();
-            nadjieb::net::sendViaSocket(sockfd, exposition_res_str.c_str(), exposition_res_str.size(), 0);
-            cb_res.close_conn = true;
-            return cb_res;
-        }
 
         if (req.getMethod() != "GET") {
             nadjieb::net::HTTPResponse method_not_allowed_res;
