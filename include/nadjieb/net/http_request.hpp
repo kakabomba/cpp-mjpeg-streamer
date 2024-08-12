@@ -16,7 +16,14 @@ class HTTPRequest {
         std::istringstream iss(message);
 
         std::getline(iss, method_, ' ');
-        std::getline(iss, target_, ' ');
+
+        std::string request_;
+        std::getline(iss, request_, ' ');
+        std::istringstream request(request_);
+
+        std::getline(request, target_, '?');
+        std::getline(request, value_, '&');
+
         std::getline(iss, version_, '\r');
 
         std::string line;
@@ -47,13 +54,16 @@ class HTTPRequest {
 
     const std::string& getVersion() const { return version_; }
 
-    const std::string& getValue(const std::string& key) { return headers_[key]; }
+    const std::string& getHeaderValue(const std::string& key) { return headers_[key]; }
+
+    const std::string& getRequestValue() { return value_; }
 
     const std::string& getBody() const { return body_; }
 
    private:
     std::string method_;
     std::string target_;
+    std::string value_;
     std::string version_;
     std::unordered_map<std::string, std::string> headers_;
     std::string body_;

@@ -24,15 +24,15 @@ TEST_SUITE("HTTPRequest") {
                     CHECK(req.getMethod() == "POST");
                     CHECK(req.getTarget() == "/cgi-bin/process.cgi");
                     CHECK(req.getVersion() == "HTTP/1.1");
-                    CHECK(req.getValue("User-Agent") == "Mozilla/4.0");
-                    CHECK(req.getValue("Server") == "Apache/2.2.14");
-                    CHECK(req.getValue("Host") == "www.tutorialspoint.com");
-                    CHECK(req.getValue("Content-Type") == "application/x-www-form-urlencoded");
-                    CHECK(req.getValue("Content-Length") == "50");
-                    CHECK(req.getValue("Accept-Language") == "en-us");
-                    CHECK(req.getValue("Accept-Encoding") == "gzip, deflate");
-                    CHECK(req.getValue("Connection") == "Keep-Alive");
-                    CHECK(req.getValue("abc") == "");
+                    CHECK(req.getHeaderValue("User-Agent") == "Mozilla/4.0");
+                    CHECK(req.getHeaderValue("Server") == "Apache/2.2.14");
+                    CHECK(req.getHeaderValue("Host") == "www.tutorialspoint.com");
+                    CHECK(req.getHeaderValue("Content-Type") == "application/x-www-form-urlencoded");
+                    CHECK(req.getHeaderValue("Content-Length") == "50");
+                    CHECK(req.getHeaderValue("Accept-Language") == "en-us");
+                    CHECK(req.getHeaderValue("Accept-Encoding") == "gzip, deflate");
+                    CHECK(req.getHeaderValue("Connection") == "Keep-Alive");
+                    CHECK(req.getHeaderValue("abc") == "");
                     CHECK(req.getBody() == "licenseID=string&content=string&/paramsXML=string\n\n\n");
                 }
             }

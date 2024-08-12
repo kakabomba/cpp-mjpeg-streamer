@@ -63,12 +63,20 @@ class MJPEGStreamer : public nadjieb::utils::NonCopyable {
 
     bool isRunning() { return (publisher_.isRunning() && listener_.isRunning()); }
 
+    int getQuality() { return requested_quality_; }
+
+    int getExposition() { return requested_exposition_; }
+
     bool hasClient(const std::string& path) { return publisher_.hasClient(path); }
 
    private:
     nadjieb::net::Listener listener_;
     nadjieb::net::Publisher publisher_;
     std::string shutdown_target_ = "/shutdown";
+    std::string quality_ = "/quality";
+    std::string exposition_ = "/exposition";
+    int requested_quality_ = 90;
+    int requested_exposition_ = 100;
 
     nadjieb::net::OnMessageCallback on_message_cb_ = [&](const nadjieb::net::SocketFD& sockfd,
                                                          const std::string& message) {
@@ -87,6 +95,58 @@ class MJPEGStreamer : public nadjieb::utils::NonCopyable {
             publisher_.stop();
 
             cb_res.end_listener = true;
+            return cb_res;
+        }
+
+        if (req.getTarget() == quality_) {
+            nadjieb::net::HTTPResponse quality_res;
+            quality_res.setVersion(req.getVersion());
+
+            try
+            {
+                requested_quality_ = std::max(1, std::min(100, std::stoi(req.getRequestValue())));
+            }
+            catch (...)
+            {
+
+            }
+
+            quality_res.setStatusCode(200);
+            quality_res.setStatusText("OK");
+            char buff[100];
+            snprintf(buff, sizeof(buff), "%d", requested_quality_);
+            std::string buffAsStdStr = buff;
+            quality_res.setBody(buffAsStdStr);
+
+            auto quality_res_str = quality_res.serialize();
+            nadjieb::net::sendViaSocket(sockfd, quality_res_str.c_str(), quality_res_str.size(), 0);
+            cb_res.close_conn = true;
+            return cb_res;
+        }
+
+        if (req.getTarget() == exposition_) {
+            nadjieb::net::HTTPResponse exposition_res;
+            exposition_res.setVersion(req.getVersion());
+
+            try
+            {
+                requested_exposition_ = std::max(1, std::min(1000*3600, std::stoi(req.getRequestValue())));
+            }
+            catch (...)
+            {
+
+            }
+
+            exposition_res.setStatusCode(200);
+            exposition_res.setStatusText("OK");
+            char buff[100];
+            snprintf(buff, sizeof(buff), "%d", requested_exposition_);
+            std::string buffAsStdStr = buff;
+            exposition_res.setBody(buffAsStdStr);
+
+            auto exposition_res_str = exposition_res.serialize();
+            nadjieb::net::sendViaSocket(sockfd, exposition_res_str.c_str(), exposition_res_str.size(), 0);
+            cb_res.close_conn = true;
             return cb_res;
         }
 
