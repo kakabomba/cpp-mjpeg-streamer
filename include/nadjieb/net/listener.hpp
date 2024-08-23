@@ -154,14 +154,14 @@ class Listener : public nadjieb::utils::NonCopyable, public nadjieb::utils::Runn
     }
 
    private:
-    SocketFD listen_sd_ = NADJIEB_MJPEG_STREAMER_INVALID_SOCKET;
-    bool end_listener_ = true;
-    std::vector<NADJIEB_MJPEG_STREAMER_POLLFD> fds_;
-    OnMessageCallback on_message_cb_;
-    OnBeforeCloseCallback on_before_close_cb_;
-    std::thread thread_listener_;
+     SocketFD listen_sd_ = NADJIEB_MJPEG_STREAMER_INVALID_SOCKET;
+     bool end_listener_ = true;
+     std::vector<NADJIEB_MJPEG_STREAMER_POLLFD> fds_;
+     OnMessageCallback on_message_cb_;
+     OnBeforeCloseCallback on_before_close_cb_;
+     std::thread thread_listener_;
 
-    void compress() {
+     void compress() {
         for (auto it = fds_.begin(); it != fds_.end();) {
             if (it->fd == NADJIEB_MJPEG_STREAMER_INVALID_SOCKET) {
                 it = fds_.erase(it);
@@ -169,7 +169,7 @@ class Listener : public nadjieb::utils::NonCopyable, public nadjieb::utils::Runn
                 ++it;
             }
         }
-    }
+     }
 
     void closeAll() {
         state_ = nadjieb::utils::State::TERMINATING;

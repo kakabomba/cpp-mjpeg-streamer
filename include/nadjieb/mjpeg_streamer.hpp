@@ -38,13 +38,32 @@ SOFTWARE.
 
 #include <string>
 #include <unordered_map>
+#include <ctime>
+#include "sys/time.h"
 
 namespace nadjieb {
+
+double start_time1 = 0;
+double seconds1() {
+	struct timeval tp;
+	gettimeofday(&tp, NULL);
+	return 1.*tp.tv_sec + 1.*tp.tv_usec / 1000000. - start_time1;
+}
+
 class MJPEGStreamer : public nadjieb::utils::NonCopyable {
    public:
     virtual ~MJPEGStreamer() { stop(); }
 
     void start(int port, int num_workers = std::thread::hardware_concurrency()) {
+		struct timeval tp;
+		gettimeofday(&tp, NULL);
+		start_time1 = 1.*tp.tv_sec + 1.*tp.tv_usec / 1000000.;
+		requested_parameters_["quality"] = 80;
+		requested_parameters_["exposition"] = 10000;
+		requested_parameters_["contrast"] = 50;
+		requested_parameters_["brightness"] = 80;
+		requested_parameters_["enhance"] = 1;
+        last_heartbeat = seconds1();
         publisher_.start(num_workers);
         listener_.withOnMessageCallback(on_message_cb_).withOnBeforeCloseCallback(on_before_close_cb_).runAsync(port);
 
@@ -68,7 +87,15 @@ class MJPEGStreamer : public nadjieb::utils::NonCopyable {
         return requested_parameters_[key];
         }
 
+    double getLastHeartBeatAgo() {
+        return seconds1() - last_heartbeat;
+    }
+
     void getRequestedRoi(int& l, int& t, int& r, int& b) {
+
+    }
+
+    void setInfo(const std::string& key, const double val) {
 
     }
 
@@ -79,8 +106,11 @@ class MJPEGStreamer : public nadjieb::utils::NonCopyable {
     nadjieb::net::Publisher publisher_;
     std::string shutdown_target_ = "/shutdown";
     std::string parameter_ = "/parameter";
+    std::string heartbeat_ = "/heartbeat";
     std::string roi_ = "/roi";
     std::unordered_map<std::string, int> requested_parameters_;
+
+    double last_heartbeat = 0.;
 
 
     nadjieb::net::OnMessageCallback on_message_cb_ = [&](const nadjieb::net::SocketFD& sockfd,
@@ -98,6 +128,13 @@ class MJPEGStreamer : public nadjieb::utils::NonCopyable {
             nadjieb::net::sendViaSocket(sockfd, ok_res_str.c_str(), ok_res_str.size(), 0);
             publisher_.stop();
             cb_res.end_listener = true;
+            return cb_res;
+        }
+
+        if (req.getTarget() == heartbeat_) {
+            last_heartbeat = seconds1();
+            nadjieb::net::sendViaSocket(sockfd, ok_res_str.c_str(), ok_res_str.size(), 0);
+            cb_res.close_conn = true;
             return cb_res;
         }
 

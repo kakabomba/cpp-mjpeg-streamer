@@ -5750,7 +5750,7 @@ namespace {
             struct JUnitTestCase
             {
                 JUnitTestCase(const std::string& _classname, const std::string& _name)
-                    : classname(_classname), name(_name), time(0), failures() {}
+                    : classname(_classname), name(_name), time(NULL), failures() {}
 
                 std::string classname, name;
                 double time;
