@@ -99,6 +99,15 @@ class MJPEGStreamer : public nadjieb::utils::NonCopyable {
 
     }
 
+    void setParameterInHeader(const std::string& key, nadjieb::net::HTTPResponse& resp) {
+        char buf[128]={0};
+        char buf1[128]={0};
+        sprintf(buf, "X-Parameter-%s", key.c_str());
+        sprintf(buf1, "%d", requested_parameters_[key]);
+        resp.setValue(buf, buf1);
+    }
+
+
     bool hasClient(const std::string& path) { return publisher_.hasClient(path); }
 
    private:
@@ -119,6 +128,8 @@ class MJPEGStreamer : public nadjieb::utils::NonCopyable {
         nadjieb::net::OnMessageCallbackResponse cb_res;
 
         nadjieb::net::HTTPResponse ok_res;
+        nadjieb::net::HTTPResponse param_res;
+
         ok_res.setVersion(req.getVersion());
         ok_res.setStatusCode(200);
         ok_res.setStatusText("OK");
@@ -161,7 +172,24 @@ class MJPEGStreamer : public nadjieb::utils::NonCopyable {
                 requested_parameters_[parameter_name] = parameter_value;
                 }
 
-            nadjieb::net::sendViaSocket(sockfd, ok_res_str.c_str(), ok_res_str.size(), 0);
+            param_res.setVersion(req.getVersion());
+            param_res.setStatusCode(200);
+            param_res.setStatusText("OK");
+            param_res.setValue("Connection", "close");
+            param_res.setValue("Cache-Control", "no-cache, no-store, must-revalidate, pre-check=0, post-check=0, max-age=0");
+            param_res.setValue("Pragma", "no-cache");
+            param_res.setValue("Content-Type", "text/html; charset=utf-8");
+            setParameterInHeader("exposition", param_res);
+            setParameterInHeader("quality", param_res);
+            setParameterInHeader("brightness", param_res);
+            setParameterInHeader("contrast", param_res);
+            setParameterInHeader("enhance", param_res);
+
+            auto param_res_str = param_res.serialize();
+
+            nadjieb::net::sendViaSocket(sockfd, param_res_str.c_str(), param_res_str.size(), 0);
+
+//            nadjieb::net::sendViaSocket(sockfd, ok_res_str.c_str(), ok_res_str.size(), 0);
             cb_res.close_conn = true;
             return cb_res;
         }
