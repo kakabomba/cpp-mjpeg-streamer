@@ -59,7 +59,7 @@ class MJPEGStreamer : public nadjieb::utils::NonCopyable {
 		gettimeofday(&tp, NULL);
 		start_time1 = 1.*tp.tv_sec + 1.*tp.tv_usec / 1000000.;
 		requested_parameters_["quality"] = 80;
-		requested_parameters_["exposition"] = 10000;
+		requested_parameters_["exposition"] = 100000;
 		requested_parameters_["contrast"] = 50;
 		requested_parameters_["brightness"] = 80;
 		requested_parameters_["enhance"] = 1;
