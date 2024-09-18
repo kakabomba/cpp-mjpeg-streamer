@@ -58,11 +58,20 @@ class MJPEGStreamer : public nadjieb::utils::NonCopyable {
 		struct timeval tp;
 		gettimeofday(&tp, NULL);
 		start_time1 = 1.*tp.tv_sec + 1.*tp.tv_usec / 1000000.;
-		requested_parameters_["quality"] = 80;
-		requested_parameters_["exposition"] = 100000;
-		requested_parameters_["contrast"] = 50;
-		requested_parameters_["brightness"] = 80;
-		requested_parameters_["enhance"] = 1;
+		parameters_["requested_quality"] = 80;
+		parameters_["requested_exposition"] = 100000;
+		parameters_["requested_contrast"] = 50;
+		parameters_["requested_brightness"] = 80;
+		parameters_["requested_enhance"] = 1;
+        parameters_["last_exposition"] = -1;
+        parameters_["last_quality"] = -1;
+        parameters_["last_brightness"] = -1;
+        parameters_["last_brightness_red"] = -1;
+        parameters_["last_brightness_green"] = -1;
+        parameters_["last_brightness_blue"] = -1;
+        parameters_["last_contrast"] = -1;
+        parameters_["last_enhance"] = -1;
+
         last_heartbeat = seconds1();
         publisher_.start(num_workers);
         listener_.withOnMessageCallback(on_message_cb_).withOnBeforeCloseCallback(on_before_close_cb_).runAsync(port);
@@ -84,7 +93,7 @@ class MJPEGStreamer : public nadjieb::utils::NonCopyable {
     bool isRunning() { return (publisher_.isRunning() && listener_.isRunning()); }
 
     int getRequestedParameter(const std::string& key) {
-        return requested_parameters_[key];
+        return parameters_[key];
         }
 
     double getLastHeartBeatAgo() {
@@ -96,14 +105,14 @@ class MJPEGStreamer : public nadjieb::utils::NonCopyable {
     }
 
     void setInfo(const std::string& key, const double val) {
-
+        parameters_[key] = val;
     }
 
     void setParameterInHeader(const std::string& key, nadjieb::net::HTTPResponse& resp) {
         char buf[128]={0};
         char buf1[128]={0};
         sprintf(buf, "X-Parameter-%s", key.c_str());
-        sprintf(buf1, "%d", requested_parameters_[key]);
+        sprintf(buf1, "%d", parameters_[key]);
         resp.setValue(buf, buf1);
     }
 
@@ -117,7 +126,7 @@ class MJPEGStreamer : public nadjieb::utils::NonCopyable {
     std::string parameter_ = "/parameter";
     std::string heartbeat_ = "/heartbeat";
     std::string roi_ = "/roi";
-    std::unordered_map<std::string, int> requested_parameters_;
+    std::unordered_map<std::string, int> parameters_;
 
     double last_heartbeat = 0.;
 
@@ -168,8 +177,8 @@ class MJPEGStreamer : public nadjieb::utils::NonCopyable {
 
             }
 
-            if (parameter_name == "quality" or parameter_name == "exposition" or parameter_name == "brightness" or parameter_name == "contrast" or parameter_name == "enhance") {
-                requested_parameters_[parameter_name] = parameter_value;
+            if (parameter_name == "requested_quality" or parameter_name == "requested_exposition" or parameter_name == "requested_brightness" or parameter_name == "requested_contrast" or parameter_name == "requested_enhance") {
+                parameters_[parameter_name] = parameter_value;
                 }
 
             param_res.setVersion(req.getVersion());
@@ -179,11 +188,21 @@ class MJPEGStreamer : public nadjieb::utils::NonCopyable {
             param_res.setValue("Cache-Control", "no-cache, no-store, must-revalidate, pre-check=0, post-check=0, max-age=0");
             param_res.setValue("Pragma", "no-cache");
             param_res.setValue("Content-Type", "text/html; charset=utf-8");
-            setParameterInHeader("exposition", param_res);
-            setParameterInHeader("quality", param_res);
-            setParameterInHeader("brightness", param_res);
-            setParameterInHeader("contrast", param_res);
-            setParameterInHeader("enhance", param_res);
+
+            setParameterInHeader("requested_exposition", param_res);
+            setParameterInHeader("requested_quality", param_res);
+            setParameterInHeader("requested_brightness", param_res);
+            setParameterInHeader("requested_contrast", param_res);
+            setParameterInHeader("requested_enhance", param_res);
+
+            setParameterInHeader("last_exposition", param_res);
+            setParameterInHeader("last_quality", param_res);
+            setParameterInHeader("last_brightness", param_res);
+            setParameterInHeader("last_brightness_red", param_res);
+            setParameterInHeader("last_brightness_green", param_res);
+            setParameterInHeader("last_brightness_blue", param_res);
+            setParameterInHeader("last_contrast", param_res);
+            setParameterInHeader("last_enhance", param_res);
 
             auto param_res_str = param_res.serialize();
 
