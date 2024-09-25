@@ -20,10 +20,14 @@ class HTTPRequest {
         std::string request_;
         std::getline(iss, request_, ' ');
         std::istringstream request(request_);
+        printf("Request full request_: %s\n", request_.c_str());
 
         std::getline(request, target_, '?');
+        printf("Request target_: %s\n", target_.c_str());
         std::getline(request, parameter_key_, '=');
+        printf("Request parameter_key_: %s\n", parameter_key_.c_str());
 		std::getline(request, parameter_value_, '&');
+        printf("Request parameter_value_: %s\n", parameter_value_.c_str());
 
         std::getline(iss, version_, '\r');
 

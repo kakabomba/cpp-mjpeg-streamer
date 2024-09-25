@@ -60,6 +60,7 @@ class MJPEGStreamer : public nadjieb::utils::NonCopyable {
 		start_time1 = 1.*tp.tv_sec + 1.*tp.tv_usec / 1000000.;
 		parameters_["requested_quality"] = 80;
 		parameters_["requested_exposition"] = 100000;
+        parameters_["requested_exposition_auto"] = 0;
 		parameters_["requested_contrast"] = 50;
 		parameters_["requested_brightness"] = 80;
 		parameters_["requested_enhance"] = 1;
@@ -134,6 +135,7 @@ class MJPEGStreamer : public nadjieb::utils::NonCopyable {
     nadjieb::net::OnMessageCallback on_message_cb_ = [&](const nadjieb::net::SocketFD& sockfd,
                                                          const std::string& message) {
         nadjieb::net::HTTPRequest req(message);
+        std::string target = req.getTarget();
         nadjieb::net::OnMessageCallbackResponse cb_res;
 
         nadjieb::net::HTTPResponse ok_res;
@@ -142,29 +144,30 @@ class MJPEGStreamer : public nadjieb::utils::NonCopyable {
         ok_res.setVersion(req.getVersion());
         ok_res.setStatusCode(200);
         ok_res.setStatusText("OK");
+        printf("OnMessageCallback. target=%s\n", target.c_str());
         auto ok_res_str = ok_res.serialize();
 
-        if (req.getTarget() == shutdown_target_) {
+        if (target == shutdown_target_) {
             nadjieb::net::sendViaSocket(sockfd, ok_res_str.c_str(), ok_res_str.size(), 0);
             publisher_.stop();
             cb_res.end_listener = true;
             return cb_res;
         }
 
-        if (req.getTarget() == heartbeat_) {
+        if (target == heartbeat_) {
             last_heartbeat = seconds1();
             nadjieb::net::sendViaSocket(sockfd, ok_res_str.c_str(), ok_res_str.size(), 0);
             cb_res.close_conn = true;
             return cb_res;
         }
 
-        if (req.getTarget() == roi_) {
+        if (target == roi_) {
             nadjieb::net::sendViaSocket(sockfd, ok_res_str.c_str(), ok_res_str.size(), 0);
             cb_res.close_conn = true;
             return cb_res;
         }
 
-        if (req.getTarget() == parameter_) {
+        if (target == parameter_) {
             std::string parameter_name;
             int parameter_value;
 
@@ -177,7 +180,7 @@ class MJPEGStreamer : public nadjieb::utils::NonCopyable {
 
             }
 
-            if (parameter_name == "requested_quality" or parameter_name == "requested_exposition" or parameter_name == "requested_brightness" or parameter_name == "requested_contrast" or parameter_name == "requested_enhance") {
+            if (parameter_name == "requested_quality" or parameter_name == "requested_exposition" or parameter_name == "requested_brightness" or parameter_name == "requested_contrast" or parameter_name == "requested_enhance" or parameter_name == "requested_exposition_auto") {
                 parameters_[parameter_name] = parameter_value;
                 }
 
@@ -189,6 +192,7 @@ class MJPEGStreamer : public nadjieb::utils::NonCopyable {
             param_res.setValue("Pragma", "no-cache");
             param_res.setValue("Content-Type", "text/html; charset=utf-8");
 
+            setParameterInHeader("requested_exposition_auto", param_res);
             setParameterInHeader("requested_exposition", param_res);
             setParameterInHeader("requested_quality", param_res);
             setParameterInHeader("requested_brightness", param_res);
@@ -228,7 +232,7 @@ class MJPEGStreamer : public nadjieb::utils::NonCopyable {
             return cb_res;
         }
 
-        if (!publisher_.pathExists(req.getTarget())) {
+        if (!publisher_.pathExists(target)) {
             nadjieb::net::HTTPResponse not_found_res;
             not_found_res.setVersion(req.getVersion());
             not_found_res.setStatusCode(404);
@@ -253,7 +257,7 @@ class MJPEGStreamer : public nadjieb::utils::NonCopyable {
 
         nadjieb::net::sendViaSocket(sockfd, init_res_str.c_str(), init_res_str.size(), 0);
 
-        publisher_.add(sockfd, req.getTarget());
+        publisher_.add(sockfd, target);
 
         return cb_res;
     };
